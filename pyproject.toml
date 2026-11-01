@@ -1,0 +1,68 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "lh-repo-sentinel"
+version = "0.1.0"
+description = "Audits Git repository configurations, commit history secret leaks, GitHub Actions .github/workflows/*.yml files, branch protection rules, and unpinned third-party action tags for script injection and GITHUB_TOKEN over-privilege."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "logihertzsystems", email = "ops@logihertz.com" },
+    { name = "Sameer Tawade (Creator, Founder, Director & Sole Developer)", email = "ops@logihertz.com" },
+]
+maintainers = [
+    { name = "Logihertz Systems (OPC) Private Limited", email = "ops@logihertz.com" },
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Security",
+    "Topic :: Software Development :: Quality Assurance",
+]
+dependencies = [
+    "typer>=0.12.0",
+    "rich>=13.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "ruff>=0.3.0",
+    "bandit>=1.7.0",
+]
+
+
+[project.urls]
+Homepage = "https://github.com/Logihertz-Systems-OPC-Pvt-Ltd/lh-repo-sentinel"
+Repository = "https://github.com/Logihertz-Systems-OPC-Pvt-Ltd/lh-repo-sentinel"
+Documentation = "https://github.com/Logihertz-Systems-OPC-Pvt-Ltd/lh-repo-sentinel#documentation"
+Issues = "https://github.com/Logihertz-Systems-OPC-Pvt-Ltd/lh-repo-sentinel/issues"
+
+[project.scripts]
+lh-sentinel = "lh_repo_sentinel.cli:app"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = []
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv", "venv"]
+skips = ["B101"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+
