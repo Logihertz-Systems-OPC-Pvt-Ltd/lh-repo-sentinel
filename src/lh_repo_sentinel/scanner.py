@@ -25,13 +25,29 @@ from lh_repo_sentinel.gitignore import (
 from lh_repo_sentinel.models import Finding, FindingType, Severity
 from lh_repo_sentinel.rules import DEFAULT_RULES, SecretRule, mask_secret
 
+INLINE_IGNORE_MARKERS: tuple[str, ...] = (
+    "lh-sentinel: ignore",
+    "lh-sentinel:ignore",
+    "sentinel: ignore",
+    "sentinel:ignore",
+    "# nosec",
+    "#nosec",
+)
+FILE_IGNORE_MARKERS: tuple[str, ...] = (
+    "lh-sentinel: ignore-file",
+    "lh-sentinel:ignore-file",
+    "sentinel: ignore-file",
+    "sentinel:ignore-file",
+    "# nosec: file",
+    "#nosec: file",
+)
 INLINE_IGNORE_MARKER = "lh-sentinel: ignore"
 FILE_IGNORE_MARKER = "lh-sentinel: ignore-file"
 
 
 def is_ignored_line(line: str) -> bool:
     """Check if the line contains an inline sentinel ignore directive."""
-    return INLINE_IGNORE_MARKER in line
+    return any(marker in line for marker in INLINE_IGNORE_MARKERS)
 
 
 def scan_line(
@@ -150,10 +166,10 @@ def scan_file(
     except OSError:
         return findings
 
-    # Check for whole-file ignore directive in header
+    # Check for whole-file ignore directive in header (first 50 lines)
     lines = content.splitlines()
-    for header_line in lines[:5]:
-        if FILE_IGNORE_MARKER in header_line:
+    for header_line in lines[:50]:
+        if any(marker in header_line for marker in FILE_IGNORE_MARKERS):
             return []
 
     file_str = str(file_path)
@@ -174,6 +190,7 @@ def scan_directory(
     target_path: Path,
     entropy_threshold: float = 4.5,
     respect_gitignore: bool = True,
+    exclude_patterns: Sequence[str] | None = None,
     rules: Sequence[SecretRule] = DEFAULT_RULES,
 ) -> list[Finding]:
     """Recursively scan a directory for hardcoded secrets and unpinned dependencies.
@@ -182,6 +199,7 @@ def scan_directory(
         target_path: Root directory path to scan.
         entropy_threshold: Shannon entropy cutoff.
         respect_gitignore: Whether to load and apply .gitignore exclusion rules.
+        exclude_patterns: Optional glob patterns or directory names to exclude.
         rules: Secret detection rules.
 
     Returns:
@@ -193,7 +211,9 @@ def scan_directory(
     if root.is_file():
         return scan_file(root, entropy_threshold=entropy_threshold, rules=rules)
 
-    gitignore_patterns = load_gitignore_patterns(root) if respect_gitignore else []
+    gitignore_patterns = list(load_gitignore_patterns(root)) if respect_gitignore else []
+    if exclude_patterns:
+        gitignore_patterns.extend(exclude_patterns)
 
     for item in root.rglob("*"):
         if should_ignore_path(item, root, gitignore_patterns):

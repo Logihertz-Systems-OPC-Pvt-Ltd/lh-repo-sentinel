@@ -50,7 +50,7 @@ def is_binary_file(file_path: Path, sample_size: int = 8192) -> bool:
 
 
 def load_gitignore_patterns(root_dir: Path) -> list[str]:
-    """Load and normalize ignore patterns from a root .gitignore file if present.
+    """Load and normalize ignore patterns from .gitignore and .sentinelignore if present.
 
     Args:
         root_dir: Root directory of the repository or scan target.
@@ -58,21 +58,21 @@ def load_gitignore_patterns(root_dir: Path) -> list[str]:
     Returns:
         A list of cleaned ignore patterns.
     """
-    gitignore_file = root_dir / ".gitignore"
     patterns: list[str] = []
+    for fname in [".gitignore", ".sentinelignore"]:
+        ignore_file = root_dir / fname
+        if not ignore_file.is_file():
+            continue
 
-    if not gitignore_file.is_file():
-        return patterns
-
-    try:
-        with gitignore_file.open("r", encoding="utf-8", errors="replace") as f:
-            for raw_line in f:
-                line = raw_line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                patterns.append(line)
-    except OSError:
-        pass
+        try:
+            with ignore_file.open("r", encoding="utf-8", errors="replace") as f:
+                for raw_line in f:
+                    line = raw_line.strip()
+                    if not line or line.startswith("#"):
+                        continue
+                    patterns.append(line)
+        except OSError:
+            pass
 
     return patterns
 
@@ -104,16 +104,19 @@ def should_ignore_path(
     try:
         relative = path.relative_to(root_dir)
         rel_str = relative.as_posix()
+        rel_parts = relative.parts
     except ValueError:
         rel_str = path.as_posix()
+        rel_parts = path.parts
 
     for pattern in patterns:
         clean_pat = pattern.rstrip("/")
         # If pattern starts with '/', match against relative path directly
         if pattern.startswith("/"):
-            if fnmatch.fnmatch(rel_str, clean_pat.lstrip("/")):
+            clean_root_pat = clean_pat.lstrip("/")
+            if fnmatch.fnmatch(rel_str, clean_root_pat):
                 return True
-            if fnmatch.fnmatch(rel_str, clean_pat.lstrip("/") + "/*"):
+            if fnmatch.fnmatch(rel_str, clean_root_pat + "/*"):
                 return True
         else:
             # Match anywhere in path
@@ -126,6 +129,9 @@ def should_ignore_path(
             if fnmatch.fnmatch(rel_str, f"*/{clean_pat}/*"):
                 return True
             if fnmatch.fnmatch(rel_str, f"{clean_pat}/*"):
+                return True
+            # Also check individual relative path parts for directory exclusion
+            if any(fnmatch.fnmatch(part, clean_pat) for part in rel_parts):
                 return True
 
     return False

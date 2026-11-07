@@ -1,0 +1,18 @@
+# ==============================================================================
+# Product:       lh-repo-sentinel (lh-repo)
+# Role:          Sentinel Ignore Configuration File
+# Organization:  Logihertz Systems (OPC) Private Limited (logihertzsystems)
+# ==============================================================================
+
+# Test directories containing synthetic test vectors and fixtures
+tests/
+
+# Build and distribution artifacts
+dist/
+build/
+*.egg-info/
+
+# Virtual environments
+.venv/
+env/
+venv/

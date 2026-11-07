@@ -101,12 +101,21 @@ def scan_command(
             help="Fail with non-zero exit code on any finding rather than only critical.",
         ),
     ] = False,
+    exclude: Annotated[
+        Optional[list[str]],
+        typer.Option(
+            "--exclude",
+            "-x",
+            help="Glob pattern or directory to exclude from scanning (repeatable).",
+        ),
+    ] = None,
 ) -> None:
     """Scan source code files or directories for hardcoded secrets and unpinned dependencies."""
     findings = scan_directory(
         target_path=path,
         entropy_threshold=entropy_threshold,
         respect_gitignore=True,
+        exclude_patterns=exclude,
     )
 
     if output_format == OutputFormat.TABLE:

@@ -96,3 +96,47 @@ def test_exporters():
     assert sarif_data["version"] == "2.1.0"
     assert len(sarif_data["runs"][0]["results"]) == 1
     assert sarif_data["runs"][0]["results"][0]["level"] == "error"
+
+
+def test_sentinelignore_filtering(tmp_path: Path):
+    """Verify directory scanner respects .sentinelignore rules."""
+    sentinelignore = tmp_path / ".sentinelignore"
+    sentinelignore.write_text("mock_tests/\n*.fixture.py\n", encoding="utf-8")
+
+    # Directory matching pattern
+    mock_dir = tmp_path / "mock_tests"
+    mock_dir.mkdir()
+    (mock_dir / "test_keys.py").write_text('AWS_KEY = "AKIAIOSFODNN7EXAMPLE"\n', encoding="utf-8")
+
+    # File matching pattern
+    (tmp_path / "creds.fixture.py").write_text(
+        'AWS_KEY = "AKIAIOSFODNN7EXAMPLE"\n', encoding="utf-8"
+    )
+
+    # Clean file
+    (tmp_path / "app.py").write_text("x = 100\n", encoding="utf-8")
+
+    findings = scan_directory(tmp_path, respect_gitignore=True)
+    assert len(findings) == 0
+
+
+def test_file_level_ignore_header_with_long_banner(tmp_path: Path):
+    """Verify ignore-file directive is recognized even following a long header comment."""
+    banner = "\n".join([f"# Header comment line {i}" for i in range(15)])
+    content = f'{banner}\n# lh-sentinel: ignore-file\nAWS_KEY = "AKIAIOSFODNN7EXAMPLE"\n'
+    target = tmp_path / "flagged_module.py"
+    target.write_text(content, encoding="utf-8")
+
+    findings = scan_file(target)
+    assert len(findings) == 0
+
+
+def test_alternate_ignore_markers():
+    """Verify alternative inline and whole-file ignore markers."""
+    # Inline nosec
+    line_nosec = 'KEY = "AKIAIOSFODNN7EXAMPLE" # nosec'
+    assert len(scan_line("test.py", 1, line_nosec)) == 0
+
+    # Inline sentinel: ignore
+    line_sentinel = 'KEY = "AKIAIOSFODNN7EXAMPLE" # sentinel: ignore'
+    assert len(scan_line("test.py", 1, line_sentinel)) == 0

@@ -86,3 +86,22 @@ def test_cli_install_hook(tmp_path: Path, monkeypatch):
     result = runner.invoke(app, ["install-hook"])
     assert result.exit_code == 0
     assert "Successfully installed pre-commit hook" in result.output
+
+
+def test_cli_scan_with_exclude_option(tmp_path: Path):
+    """Verify --exclude option successfully suppresses findings in excluded paths."""
+    fixtures_dir = tmp_path / "fixtures"
+    fixtures_dir.mkdir()
+    (fixtures_dir / "keys.py").write_text('KEY = "AKIAIOSFODNN7EXAMPLE"\n', encoding="utf-8")
+
+    clean_file = tmp_path / "main.py"
+    clean_file.write_text("print('clean')\n", encoding="utf-8")
+
+    # Without exclude, should fail
+    result_fail = runner.invoke(app, ["scan", str(tmp_path)])
+    assert result_fail.exit_code == 1
+
+    # With --exclude fixtures, should pass
+    result_pass = runner.invoke(app, ["scan", str(tmp_path), "--exclude", "fixtures"])
+    assert result_pass.exit_code == 0
+    assert "No security secrets or unpinned dependencies detected" in result_pass.output
